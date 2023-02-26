@@ -30,7 +30,7 @@ async def webhook():
 
             response = await openai.Completion.create(
                 model="davinci:ft-personal-2023-02-25-09-25-19",
-                prompt: "Human: ${prompt}\nAI: ",
+                prompt= `Human: ${prompt}\nAI: `,
                 temperature=0.89,
                 max_tokens=162,
                 top_p=1,
