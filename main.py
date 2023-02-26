@@ -30,7 +30,7 @@ async def webhook():
 
             response = await openai.Completion.create(
                 model="davinci:ft-personal-2023-02-25-09-25-19",
-                prompt="The following is a conversation with a therapist and a user. The therapist is JOY, who uses compassionate listening to have helpful and meaningful conversations with users. JOY is empathic and friendly. JOY's objective is to make the user feel better by feeling heard. With each response, JOY offers follow-up questions to encourage openness and tries to continue the conversation in a natural way. \n\nJOY-> Hello, I am your personal mental health assistant. What's on your mind today?\nUser->"+query+"JOY->",
+                prompt=`Human: ${prompt}\nAI: `,
                 temperature=0.89,
                 max_tokens=162,
                 top_p=1,
