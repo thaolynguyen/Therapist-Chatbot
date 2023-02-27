@@ -1,41 +1,88 @@
-import openai
-import os
-from google.protobuf.json_format import MessageToJson
-from flask import Flask, request, make_response
-import dialogflow_v2 as dialogflow
-from dialogflow_v2.types import QueryResult
-import json
+const express = require('express');
+const { Configuration, OpenAIApi } = require("openai");
+require('dotenv').config();
 
-app = Flask(__name__)
-@app.route('/webhook', methods=['POST'])
 
-def webhook():
-    req = request.get_json(silent=True, force=True)
-    query_result = QueryResult.from_json(json.dumps(req['queryResult']))
-    fulfillment_text = process_dialogflow_response(query_result)
-    res = {'fulfillmentText': fulfillment_text}
-    return make_response(json.dumps(res))
+const configuration = new Configuration({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
 
-def process_dialogflow_response(query_result):
-    question = query_result.query_text
-    answer = generate_answer(question)
-    return answer
 
-def generate_answer(question):
-    openai.api_key = "YOUR_OPENAI_API_KEY"
-    prompt = f"Question: {question}\nAnswer:"
-    response = openai.Completion.create(
-        model="davinci:ft-personal-2023-02-24-13-50-55",
-        prompt="This is a discussion between a therapist and a patient",
-        temperature=0.7,
-        max_tokens=1024,
-        n = 1,
-        stop=None,
-        timeout=15,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    answer = response.choices[0].text.strip()
-    return answer
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+const textGeneration = async (prompt) => {
+
+    try {
+        const response = await openai.createCompletion({
+            model: 'text-davinci-003',
+            prompt: `Human: ${prompt}\nAI: `,
+            temperature: 0.9,
+            max_tokens: 500,
+            top_p: 1,
+            frequency_penalty: 0,
+            presence_penalty: 0.6,
+            stop: ['Human:', 'AI:']
+        });
+    
+        return {
+            status: 1,
+            response: `${response.data.choices[0].text}`
+        };
+    } catch (error) {
+        return {
+            status: 0,
+            response: ''
+        };
+    }
+};
+
+
+const webApp = express();
+
+const PORT = process.env.PORT;
+
+webApp.use(express.urlencoded({ extended: true }));
+webApp.use(express.json());
+webApp.use((req, res, next) => {
+    console.log(`Path ${req.path} with Method ${req.method}`);
+    next();
+});
+
+
+webApp.get('/', (req, res) => {
+    res.sendStatus(200);
+});
+
+
+webApp.post('/dialogflow', async (req, res) => {
+    
+    let action = req.body.queryResult.action;
+    let queryText = req.body.queryResult.queryText;
+
+    if (action === 'input.unknown') {
+        let result = await textGeneration(queryText);
+        if (result.status == 1) {
+            res.send(
+                {
+                    fulfillmentText: result.response
+                }
+            );
+        } else {
+            res.send(
+                {
+                    fulfillmentText: `Sorry, I'm not able to help with that.`
+                }
+            );
+        }
+    } else {
+        res.send(
+            {
+                fulfillmentText: `No handler for the action ${action}.`
+            }
+        );
+    }
+});
+
+
+webApp.listen(PORT, () => {
+    console.log(`Server is up and running at ${PORT}`);
+});
